@@ -40,6 +40,7 @@ services:
       - MAIL_USERNAME=brody
       - MAIL_PASSWORD=brody
       - EMAIL_SYSTEM=notification@bank.com
+      - ZIPKIN_HOST=zipkin
     depends_on:
       - discovery-service
       - gateway-service
@@ -62,6 +63,7 @@ services:
       - MYSQL_DATABASE=utilisateur
       - JWT_SECRET=AaZzBbCcYyDdXxEeWwFf
       - JWT_EXPIRATION=604800000
+      - ZIPKIN_HOST=zipkin
     depends_on:
       - discovery-service
       - gateway-service
@@ -85,6 +87,7 @@ services:
       - MYSQL_DATABASE=customer_db
       - JWT_SECRET=AaZzBbCcYyDdXxEeWwFf
       - JWT_EXPIRATION=604800000
+      - ZIPKIN_HOST=zipkin
     depends_on:
       - discovery-service
       - gateway-service
@@ -111,6 +114,7 @@ services:
       - AXON_CONSOLE=df10b708-0:6p47cea5j2ff4ae0a17p227163886825
       - JWT_SECRET=AaZzBbCcYyDdXxEeWwFf
       - JWT_EXPIRATION=604800000
+      - ZIPKIN_HOST=zipkin
     depends_on:
       - discovery-service
       - gateway-service
