@@ -1,19 +1,13 @@
-FROM openjdk:21-oracle
+FROM eclipse-temurin:21-jdk-alpine AS build
+WORKDIR /app
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
+COPY src/ src/
+RUN ./mvnw clean package -DskipTests -B
 
-# Definition of the maintainer and author of the image
-LABEL authors="Brody Gaudel MOUNANGA BOUKA"
-LABEL maintainer="Brody Gaudel MOUNANGA BOUKA"
-
-# Setting environment variables
-ENV DISCOVERY_SERVER=http://localhost:8761/eureka/
-ENV MYSQL_USER=root
-ENV MYSQL_PWD=root
-ENV MYSQL_HOST=172.20.0.2
-ENV MYSQL_PORT=3307
-ENV MYSQL_DATABASE=customer_db
-
-# Copying your jar application into the container
-COPY target/customer-service-0.0.1.jar customer-service.jar
-
-# Command to launch the application when running the container
-ENTRYPOINT ["java","-jar","customer-service.jar"]
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8886
+ENTRYPOINT ["java", "-jar", "app.jar"]

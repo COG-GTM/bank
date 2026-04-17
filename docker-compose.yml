@@ -1,6 +1,47 @@
-version: '3.8'
-
 services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - bank-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  axon-server:
+    image: axoniq/axonserver:latest
+    container_name: axon-server
+    ports:
+      - "8024:8024"
+      - "8124:8124"
+    volumes:
+      - axon-data:/data
+      - axon-events:/eventdata
+    networks:
+      - bank-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8024/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - bank-network
+
   discovery-service:
     image: discovery-service
     container_name: discovery-service
@@ -32,40 +73,41 @@ services:
     build:
       context: ./notification-service
     ports:
-      - "8885:8885"
+      - "8887:8887"
     environment:
       - DISCOVERY_SERVICE=http://discovery-service:8761/eureka/
-      - MAIL_HOST=172.18.0.4
+      - MAIL_HOST=mailhog
       - MAIL_PORT=1025
-      - MAIL_USERNAME=brody
-      - MAIL_PASSWORD=brody
-      - EMAIL_SYSTEM=notification@bank.com
+      - MAIL_USERNAME=${MAIL_USERNAME:-brody}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-brody}
+      - EMAIL_SYSTEM=${EMAIL_SYSTEM:-notification@bank.com}
     depends_on:
       - discovery-service
-      - gateway-service
+      - mailhog
     networks:
       - bank-network
 
-  user-service:
-    image: user-service
-    container_name: user-service
+  authentication-service:
+    image: authentication-service
+    container_name: authentication-service
     build:
-      context: ./user-service
+      context: ./authentication-service
     ports:
-      - "8884:8884"
+      - "8885:8885"
     environment:
       - DISCOVERY_SERVICE=http://discovery-service:8761/eureka/
-      - MYSQL_USER=root
-      - MYSQL_PWD=root
-      - MYSQL_HOST=172.18.0.2
+      - MYSQL_USER=${MYSQL_USER:-root}
+      - MYSQL_PWD=${MYSQL_PWD:-root}
+      - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
-      - MYSQL_DATABASE=utilisateur
-      - JWT_SECRET=AaZzBbCcYyDdXxEeWwFf
-      - JWT_EXPIRATION=604800000
+      - MYSQL_DATABASE=${MYSQL_DATABASE_AUTH:-db_user_new_devs_nours}
+      - JWT_SECRET=${JWT_SECRET:-AaZzBbCcYyDdXxEeWwFf}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-604800000}
     depends_on:
-      - discovery-service
-      - gateway-service
-      - notification-service
+      mysql:
+        condition: service_healthy
+      discovery-service:
+        condition: service_started
     networks:
       - bank-network
 
@@ -75,20 +117,21 @@ services:
     build:
       context: ./customer-service
     ports:
-      - "8887:8887"
+      - "8886:8886"
     environment:
       - DISCOVERY_SERVICE=http://discovery-service:8761/eureka/
-      - MYSQL_USER=root
-      - MYSQL_PWD=root
-      - MYSQL_HOST=172.18.0.2
+      - MYSQL_USER=${MYSQL_USER:-root}
+      - MYSQL_PWD=${MYSQL_PWD:-root}
+      - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
-      - MYSQL_DATABASE=customer_db
-      - JWT_SECRET=AaZzBbCcYyDdXxEeWwFf
-      - JWT_EXPIRATION=604800000
+      - MYSQL_DATABASE=${MYSQL_DATABASE_CUSTOMER:-customer_db}
+      - JWT_SECRET=${JWT_SECRET:-AaZzBbCcYyDdXxEeWwFf}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-604800000}
     depends_on:
-      - discovery-service
-      - gateway-service
-      - notification-service
+      mysql:
+        condition: service_healthy
+      discovery-service:
+        condition: service_started
     networks:
       - bank-network
 
@@ -98,26 +141,33 @@ services:
     build:
       context: ./account-service
     ports:
-      - "8886:8886"
+      - "8884:8884"
     environment:
       - DISCOVERY_SERVICE=http://discovery-service:8761/eureka/
-      - MYSQL_USER=root
-      - MYSQL_PWD=root
-      - MYSQL_HOST=172.18.0.2
+      - MYSQL_USER=${MYSQL_USER:-root}
+      - MYSQL_PWD=${MYSQL_PWD:-root}
+      - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
-      - MYSQL_DATABASE=account_db
-      - AXON_HOST=172.18.0.3
+      - MYSQL_DATABASE=${MYSQL_DATABASE_ACCOUNT:-account_db}
+      - AXON_HOST=axon-server
       - AXON_PORT=8124
-      - AXON_CONSOLE=df10b708-0:6p47cea5j2ff4ae0a17p227163886825
-      - JWT_SECRET=AaZzBbCcYyDdXxEeWwFf
-      - JWT_EXPIRATION=604800000
+      - JWT_SECRET=${JWT_SECRET:-AaZzBbCcYyDdXxEeWwFf}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-604800000}
     depends_on:
-      - discovery-service
-      - gateway-service
-      - customer-service
+      mysql:
+        condition: service_healthy
+      axon-server:
+        condition: service_healthy
+      discovery-service:
+        condition: service_started
     networks:
       - bank-network
 
 networks:
   bank-network:
-    external: true
+    driver: bridge
+
+volumes:
+  mysql-data:
+  axon-data:
+  axon-events:
