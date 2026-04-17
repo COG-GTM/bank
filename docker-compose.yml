@@ -124,7 +124,7 @@ services:
       - MYSQL_PWD=${MYSQL_PWD:-root}
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
-      - MYSQL_DATABASE=${MYSQL_DATABASE_CUSTOMER:-customer_db}
+      - DATABASE=${MYSQL_DATABASE_CUSTOMER:-customer_db}
       - JWT_SECRET=${JWT_SECRET:-AaZzBbCcYyDdXxEeWwFf}
       - JWT_EXPIRATION=${JWT_EXPIRATION:-604800000}
     depends_on:
@@ -148,7 +148,7 @@ services:
       - MYSQL_PWD=${MYSQL_PWD:-root}
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
-      - MYSQL_DATABASE=${MYSQL_DATABASE_ACCOUNT:-account_db}
+      - DATABASE=${MYSQL_DATABASE_ACCOUNT:-account_db}
       - AXON_HOST=axon-server
       - AXON_PORT=8124
       - JWT_SECRET=${JWT_SECRET:-AaZzBbCcYyDdXxEeWwFf}
