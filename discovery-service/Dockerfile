@@ -1,12 +1,13 @@
-# Definition of the base image
-FROM openjdk:21-oracle
+FROM eclipse-temurin:21-jdk-alpine AS build
+WORKDIR /app
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
+COPY src/ src/
+RUN ./mvnw clean package -DskipTests -B
 
-# Definition of the maintainer and author of the image
-LABEL authors="Brody Gaudel MOUNANGA BOUKA"
-LABEL maintainer="Brody Gaudel MOUNANGA BOUKA"
-
-# Copying your jar application into the container
-COPY target/discovery-service-0.0.3.jar discovery-service.jar
-
-# Command to launch the application when running the container
-ENTRYPOINT ["java","-jar","discovery-service.jar"]
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8761
+ENTRYPOINT ["java", "-jar", "app.jar"]
