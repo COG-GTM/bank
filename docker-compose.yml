@@ -118,6 +118,14 @@ services:
     networks:
       - bank-network
 
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - bank-network
+
 networks:
   bank-network:
     external: true
