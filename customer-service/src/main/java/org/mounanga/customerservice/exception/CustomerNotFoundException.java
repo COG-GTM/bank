@@ -1,4 +1,4 @@
-package org.mounanga.customerservice.excetion;
+package org.mounanga.customerservice.exception;
 
 public class CustomerNotFoundException extends RuntimeException {
 

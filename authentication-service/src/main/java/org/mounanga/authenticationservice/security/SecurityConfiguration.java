@@ -34,6 +34,8 @@ public class SecurityConfiguration {
                                 "/notifications/**",
                                 "/passwords/**",
                                 "/actuator/**",
+                                "/api-docs",
+                                "/api-docs/**",
                                 "/v2/api-docs",
                                 "/v3/api-docs",
                                 "/v3/api-docs/**",
