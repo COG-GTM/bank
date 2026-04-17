@@ -39,3 +39,13 @@ CREATE TABLE IF NOT EXISTS account_email_customer_id (
     UNIQUE KEY uk_aeci_email (email),
     UNIQUE KEY uk_aeci_customer_id (customer_id)
 );
+
+CREATE TABLE IF NOT EXISTS token_entry (
+    processor_name VARCHAR(255) NOT NULL,
+    segment INT NOT NULL,
+    token BLOB,
+    token_type VARCHAR(255),
+    timestamp VARCHAR(255),
+    owner VARCHAR(255),
+    PRIMARY KEY (processor_name, segment)
+);
