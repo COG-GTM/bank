@@ -79,7 +79,7 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
 
     private boolean isTokenExpired(@NotNull DecodedJWT jwt) {
         Date expiration = jwt.getExpiresAt();
-        return expiration.before(new Date());
+        return expiration == null || expiration.before(new Date());
     }
 
     private void setUpSpringAuthentication(@NotNull DecodedJWT jwt, HttpServletRequest request) {
