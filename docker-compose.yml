@@ -118,6 +118,29 @@ services:
     networks:
       - bank-network
 
+  collections-service:
+    image: collections-service
+    container_name: collections-service
+    build:
+      context: ./collections-service
+    ports:
+      - "8889:8889"
+    environment:
+      - DISCOVERY_SERVICE=http://discovery-service:8761/eureka/
+      - MYSQL_USER=root
+      - MYSQL_PWD=root
+      - MYSQL_HOST=172.18.0.2
+      - MYSQL_PORT=3306
+      - DATABASE=collections_db
+      - JWT_SECRET=AaZzBbCcYyDdXxEeWwFf
+      - JWT_EXPIRATION=604800000
+    depends_on:
+      - discovery-service
+      - gateway-service
+      - notification-service
+    networks:
+      - bank-network
+
 networks:
   bank-network:
     external: true
