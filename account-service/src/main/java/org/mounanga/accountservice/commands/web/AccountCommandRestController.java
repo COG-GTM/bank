@@ -9,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 import org.mounanga.accountservice.commands.command.*;
 import org.mounanga.accountservice.commands.dto.*;
 import org.mounanga.accountservice.commands.exception.CustomerNotFoundException;
+import org.mounanga.accountservice.commands.kafka.publisher.KafkaEventPublisher;
 import org.mounanga.accountservice.commands.util.factory.CommandFactory;
 import org.mounanga.accountservice.commands.util.generator.IdGenerator;
 import org.mounanga.accountservice.commands.util.proxy.TransferProxy;
@@ -31,12 +32,14 @@ public class AccountCommandRestController {
     private final CustomerRestClient customerRestClient;
     private final IdGenerator idGenerator;
     private final SecurityInformation securityInformation;
+    private final KafkaEventPublisher kafkaEventPublisher;
 
-    public AccountCommandRestController(CommandGateway commandGateway, CustomerRestClient customerRestClient, IdGenerator idGenerator, SecurityInformation securityInformation) {
+    public AccountCommandRestController(CommandGateway commandGateway, CustomerRestClient customerRestClient, IdGenerator idGenerator, SecurityInformation securityInformation, KafkaEventPublisher kafkaEventPublisher) {
         this.commandGateway = commandGateway;
         this.customerRestClient = customerRestClient;
         this.idGenerator = idGenerator;
         this.securityInformation = securityInformation;
+        this.kafkaEventPublisher = kafkaEventPublisher;
     }
 
     @PostMapping("/create")
@@ -76,7 +79,7 @@ public class AccountCommandRestController {
 
     @PostMapping("/transfer")
     public List<CompletableFuture<String>> transfer(@RequestBody @Valid TransferRequestDTO dto){
-        TransferProxy proxy = new TransferProxy();
+        TransferProxy proxy = new TransferProxy(kafkaEventPublisher);
         return proxy.transfer(dto, commandGateway, securityInformation);
     }
 

@@ -3,6 +3,7 @@ package org.mounanga.accountservice.queries.service;
 import lombok.extern.slf4j.Slf4j;
 import org.axonframework.eventhandling.EventHandler;
 import org.jetbrains.annotations.NotNull;
+import org.mounanga.accountservice.commands.kafka.publisher.KafkaEventPublisher;
 import org.mounanga.accountservice.common.enums.AccountStatus;
 import org.mounanga.accountservice.common.enums.OperationType;
 import org.mounanga.accountservice.common.event.*;
@@ -26,11 +27,13 @@ public class AccountEventHandlerService {
     private final AccountRepository accountRepository;
     private final OperationRepository operationRepository;
     private final NotificationService notificationService;
+    private final KafkaEventPublisher kafkaEventPublisher;
 
-    public AccountEventHandlerService(AccountRepository accountRepository, OperationRepository operationRepository, NotificationService notificationService) {
+    public AccountEventHandlerService(AccountRepository accountRepository, OperationRepository operationRepository, NotificationService notificationService, KafkaEventPublisher kafkaEventPublisher) {
         this.accountRepository = accountRepository;
         this.operationRepository = operationRepository;
         this.notificationService = notificationService;
+        this.kafkaEventPublisher = kafkaEventPublisher;
     }
 
     @EventHandler
@@ -87,6 +90,7 @@ public class AccountEventHandlerService {
         Operation creditOperation = operationRepository.save(operation);
         log.info("Credit Operation saved with id '{}'", creditOperation.getId());
         notificationService.sendAccountCreditedNotification(creditedAccount.getEmail(), event.getAmount(), creditedAccount.getBalance(), event.getEventDate());
+        kafkaEventPublisher.publishAccountCredited(event);
         return creditOperation;
     }
 
@@ -101,6 +105,7 @@ public class AccountEventHandlerService {
         Operation debitOperation = operationRepository.save(operation);
         log.info("Debit Operation saved with id '{}'", debitOperation.getId());
         notificationService.sendAccountDebitedNotification(debitedAccount.getEmail(), event.getAmount(), debitedAccount.getBalance(), event.getEventDate());
+        kafkaEventPublisher.publishAccountDebited(event);
         return debitOperation;
     }
 

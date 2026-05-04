@@ -6,9 +6,11 @@ import org.jetbrains.annotations.NotNull;
 import org.mounanga.accountservice.commands.command.CreditAccountCommand;
 import org.mounanga.accountservice.commands.command.DebitAccountCommand;
 import org.mounanga.accountservice.commands.dto.TransferRequestDTO;
+import org.mounanga.accountservice.commands.kafka.publisher.KafkaEventPublisher;
 import org.mounanga.accountservice.commands.util.factory.CommandFactory;
 import org.mounanga.accountservice.common.security.SecurityInformation;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -16,8 +18,10 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class TransferProxy {
 
-    public TransferProxy(){
-        super();
+    private final KafkaEventPublisher kafkaEventPublisher;
+
+    public TransferProxy(KafkaEventPublisher kafkaEventPublisher) {
+        this.kafkaEventPublisher = kafkaEventPublisher;
     }
 
     public List<CompletableFuture<String>> transfer(final TransferRequestDTO dto, @NotNull CommandGateway commandGateway, @NotNull SecurityInformation securityInformation){
@@ -33,6 +37,14 @@ public class TransferProxy {
             CompletableFuture<String> credited = commandGateway.send(creditCommand);
             credited.join();
             log.info("Credited success: {}", credited);
+            kafkaEventPublisher.publishTransferCompleted(
+                    dto.accountIdFrom(),
+                    dto.accountIdTo(),
+                    dto.amount(),
+                    dto.description(),
+                    securityInformation.getUsername(),
+                    LocalDateTime.now()
+            );
             return List.of(debited, credited);
         }catch (Exception e){
             log.warn(e.getMessage());
