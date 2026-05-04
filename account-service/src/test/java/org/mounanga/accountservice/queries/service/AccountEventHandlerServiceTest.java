@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mounanga.accountservice.commands.kafka.publisher.KafkaEventPublisher;
 import org.mounanga.accountservice.common.enums.AccountStatus;
 import org.mounanga.accountservice.common.enums.Currency;
 import org.mounanga.accountservice.common.enums.OperationType;
@@ -36,13 +37,16 @@ class AccountEventHandlerServiceTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private KafkaEventPublisher kafkaEventPublisher;
+
     @InjectMocks
     private AccountEventHandlerService accountEventHandlerService;
     Account account;
 
     @BeforeEach
     void setUp() {
-        this.accountEventHandlerService = new AccountEventHandlerService(accountRepository, operationRepository, notificationService);
+        this.accountEventHandlerService = new AccountEventHandlerService(accountRepository, operationRepository, notificationService, kafkaEventPublisher);
         account = new Account();
         account.setBalance(BigDecimal.ZERO);
         account.setCurrency(Currency.EUR);
