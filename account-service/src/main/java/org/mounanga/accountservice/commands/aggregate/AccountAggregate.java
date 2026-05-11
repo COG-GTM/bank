@@ -32,7 +32,6 @@ public class AccountAggregate {
     private BigDecimal balance;
     private Currency currency;
     private String customerId;
-    private String email;
     private LocalDateTime createdDate;
     private String createdBy;
     private LocalDateTime lastModifiedDate;
@@ -57,7 +56,6 @@ public class AccountAggregate {
         this.balance = event.getBalance();
         this.currency = event.getCurrency();
         this.customerId = event.getCustomerId();
-        this.email = event.getEmail();
         this.createdBy = event.getEventBy();
         this.createdDate = event.getEventDate();
         AccountActivatedEvent accountActivatedEvent = EventFactory.create(this.accountId, this.createdDate, this.createdBy, AccountStatus.ACTIVATED);
@@ -157,7 +155,6 @@ public class AccountAggregate {
         this.lastModifiedBy = event.getEventBy();
         this.lastModifiedDate = event.getEventDate();
         this.status = AccountStatus.DELETED;
-        this.email = null;
         this.customerId = null;
     }
 

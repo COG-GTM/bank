@@ -36,9 +36,6 @@ public class Account {
     @Column(nullable = false, unique = true, updatable = false)
     private String customerId;
 
-    @Column(nullable = false, unique = true, updatable = false)
-    private String email;
-
     @Column(nullable = false,updatable = false)
     private LocalDateTime createdDate;
 

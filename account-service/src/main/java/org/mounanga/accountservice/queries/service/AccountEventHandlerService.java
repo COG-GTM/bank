@@ -11,7 +11,6 @@ import org.mounanga.accountservice.queries.entity.Operation;
 import org.mounanga.accountservice.queries.exception.AccountNotFoundException;
 import org.mounanga.accountservice.queries.reposiory.AccountRepository;
 import org.mounanga.accountservice.queries.reposiory.OperationRepository;
-import org.mounanga.accountservice.queries.util.notification.NotificationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,12 +24,10 @@ public class AccountEventHandlerService {
 
     private final AccountRepository accountRepository;
     private final OperationRepository operationRepository;
-    private final NotificationService notificationService;
 
-    public AccountEventHandlerService(AccountRepository accountRepository, OperationRepository operationRepository, NotificationService notificationService) {
+    public AccountEventHandlerService(AccountRepository accountRepository, OperationRepository operationRepository) {
         this.accountRepository = accountRepository;
         this.operationRepository = operationRepository;
-        this.notificationService = notificationService;
     }
 
     @EventHandler
@@ -39,7 +36,6 @@ public class AccountEventHandlerService {
         Account account = buildNewAccount(event);
         Account savedAccount = accountRepository.save(account);
         log.info("Account saved with id {} by {} at {}", savedAccount.getId(), savedAccount.getCreatedBy(), savedAccount.getCreatedDate());
-        notificationService.sentAccountCreationNotification(event.getId(), event.getEmail(), event.getEventDate());
         return savedAccount;
     }
 
@@ -50,7 +46,6 @@ public class AccountEventHandlerService {
         updateAccountStatus(account, event.getStatus(), event.getEventBy(), event.getEventDate());
         Account activatedAccount = accountRepository.save(account);
         log.info("Account with id {} activated by {} at {}", activatedAccount.getId(), activatedAccount.getLastModifiedBy(), activatedAccount.getLastModifiedDate());
-        notificationService.sendAccountActivationNotification(account.getEmail(), event.getEventDate());
         return activatedAccount;
     }
 
@@ -61,7 +56,6 @@ public class AccountEventHandlerService {
         updateAccountStatus(account, event.getStatus(), event.getEventBy(), event.getEventDate());
         Account suspendedAccount = accountRepository.save(account);
         log.info("Account with id {} suspended by {} at {}", suspendedAccount.getId(), suspendedAccount.getLastModifiedBy(), suspendedAccount.getLastModifiedDate());
-        notificationService.sendAccountSuspensionNotification(account.getEmail(), event.getEventDate());
         return suspendedAccount;
     }
 
@@ -73,7 +67,6 @@ public class AccountEventHandlerService {
         log.info("All operations linked to the account with id {} have been deleted.", event.getId());
         accountRepository.deleteById(account.getId());
         log.info("Account with id {} deleted by {} at {}", event.getId(), event.getEventBy(), event.getEventDate());
-        notificationService.sendAccountDeletedNotification(event.getId(), account.getEmail(), event.getEventDate());
     }
 
     @EventHandler
@@ -86,7 +79,6 @@ public class AccountEventHandlerService {
         Operation operation = createOperation(creditedAccount, event.getAmount(), event.getType(), event.getDescription(), event.getEventBy(), event.getEventDate());
         Operation creditOperation = operationRepository.save(operation);
         log.info("Credit Operation saved with id '{}'", creditOperation.getId());
-        notificationService.sendAccountCreditedNotification(creditedAccount.getEmail(), event.getAmount(), creditedAccount.getBalance(), event.getEventDate());
         return creditOperation;
     }
 
@@ -100,14 +92,12 @@ public class AccountEventHandlerService {
         Operation operation = createOperation(debitedAccount, event.getAmount(), event.getType(), event.getDescription(), event.getEventBy(), event.getEventDate());
         Operation debitOperation = operationRepository.save(operation);
         log.info("Debit Operation saved with id '{}'", debitOperation.getId());
-        notificationService.sendAccountDebitedNotification(debitedAccount.getEmail(), event.getAmount(), debitedAccount.getBalance(), event.getEventDate());
         return debitOperation;
     }
 
     private Account buildNewAccount(@NotNull AccountCreatedEvent event) {
         return Account.builder()
                 .id(event.getId())
-                .email(event.getEmail())
                 .customerId(event.getCustomerId())
                 .currency(event.getCurrency())
                 .status(event.getStatus())
@@ -145,4 +135,3 @@ public class AccountEventHandlerService {
                 .orElseThrow(() -> new AccountNotFoundException(String.format("Account with id %s not found", id)));
     }
 }
-

@@ -45,7 +45,7 @@ public class AccountCommandRestController {
         if(customer == null){
             throw new CustomerNotFoundException(String.format("Customer with id %s not found", dto.customerId()));
         }
-        CreateAccountCommand command = createCommand(customer.id(), customer.email(), dto.currency());
+        CreateAccountCommand command = createCommand(customer.id(), dto.currency());
         return commandGateway.send(command);
     }
 
@@ -97,10 +97,10 @@ public class AccountCommandRestController {
     }
 
     @NotNull
-    @Contract("_, _, _ -> new")
-    private CreateAccountCommand createCommand(String customerId, String email, Currency currency) {
+    @Contract("_, _ -> new")
+    private CreateAccountCommand createCommand(String customerId, Currency currency) {
         return new CreateAccountCommand(idGenerator.autoGenerateId(), LocalDateTime.now(),
-                securityInformation.getUsername(), AccountStatus.CREATED, BigDecimal.ZERO, currency, customerId, email
+                securityInformation.getUsername(), AccountStatus.CREATED, BigDecimal.ZERO, currency, customerId
         );
     }
 

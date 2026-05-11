@@ -14,7 +14,6 @@ public class EventFactory {
         super();
     }
 
-
     @NotNull
     @Contract("_ -> new")
     public static AccountCreatedEvent create(@NotNull final CreateAccountCommand command) {
@@ -25,8 +24,7 @@ public class EventFactory {
                 command.getStatus(),
                 command.getBalance(),
                 command.getCurrency(),
-                command.getCustomerId(),
-                command.getEmail()
+                command.getCustomerId()
         );
     }
 
@@ -98,6 +96,5 @@ public class EventFactory {
                 command.getCommandBy()
         );
     }
-
 
 }

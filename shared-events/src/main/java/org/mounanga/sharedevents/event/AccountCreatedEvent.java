@@ -1,8 +1,8 @@
-package org.mounanga.accountservice.common.event;
+package org.mounanga.sharedevents.event;
 
 import lombok.Getter;
-import org.mounanga.accountservice.common.enums.AccountStatus;
-import org.mounanga.accountservice.common.enums.Currency;
+import org.mounanga.sharedevents.enums.AccountStatus;
+import org.mounanga.sharedevents.enums.Currency;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

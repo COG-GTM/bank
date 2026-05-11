@@ -1,9 +1,8 @@
-package org.mounanga.accountservice.commands.util.validation;
+package org.mounanga.notificationservice.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-
 import lombok.*;
 
 @Entity
@@ -12,10 +11,11 @@ import lombok.*;
 @Getter
 @Setter
 @ToString
-public class AccountEmailCustomerId {
+public class AccountCustomerMapping {
+
     @Id
     private String accountId;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String customerId;
 }

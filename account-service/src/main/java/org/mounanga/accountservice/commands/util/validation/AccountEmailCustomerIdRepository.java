@@ -7,9 +7,6 @@ public interface AccountEmailCustomerIdRepository extends JpaRepository<AccountE
 
     @Override
     boolean existsById(@NotNull String s);
-    boolean existsByEmail(String email);
     boolean existsByCustomerId(String customerId);
-    AccountEmailCustomerId findByEmail(String email);
     AccountEmailCustomerId findByCustomerId(String customerId);
-    AccountEmailCustomerId findByEmailAndCustomerId(String email, String customerId);
 }

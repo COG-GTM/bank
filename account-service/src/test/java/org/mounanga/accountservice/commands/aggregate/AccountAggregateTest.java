@@ -38,8 +38,7 @@ class AccountAggregateTest {
                 AccountStatus.ACTIVATED,
                 BigDecimal.valueOf(1000),
                 Currency.USD,
-                "cust123",
-                "customer@example.com"
+                "cust123"
         );
 
         AccountCreatedEvent accountCreatedEvent = new AccountCreatedEvent(
@@ -49,8 +48,7 @@ class AccountAggregateTest {
                 AccountStatus.ACTIVATED,
                 BigDecimal.valueOf(1000),
                 Currency.USD,
-                "cust123",
-                "customer@example.com"
+                "cust123"
         );
 
         AccountActivatedEvent accountActivatedEvent = new AccountActivatedEvent(
@@ -72,8 +70,7 @@ class AccountAggregateTest {
                 AccountStatus.ACTIVATED,
                 BigDecimal.valueOf(1000),
                 Currency.USD,
-                "cust123",
-                "customer@example.com"
+                "cust123"
         );
 
         ActivateAccountCommand command = new ActivateAccountCommand(
@@ -120,10 +117,10 @@ class AccountAggregateTest {
 
     @Test
     void testCreditAccountCommand() {
-        CreditAccountCommand command = new CreditAccountCommand("acc123", LocalDateTime.now(), "admin", new BigDecimal("100.00"), OperationType.CREDIT, "Deposit description");
+        CreditAccountCommand command = new CreditAccountCommand("acc123", now, "admin", new BigDecimal("100.00"), OperationType.CREDIT, "Deposit description");
         AccountCreditedEvent expectedEvent = new AccountCreditedEvent(
                 "acc123",
-                LocalDateTime.now(),
+                now,
                 "admin",
                 new BigDecimal("100.00"),
                 OperationType.CREDIT,
@@ -137,8 +134,7 @@ class AccountAggregateTest {
                 AccountStatus.ACTIVATED,
                 BigDecimal.valueOf(1000),
                 Currency.USD,
-                "cust123",
-                "customer@example.com"
+                "cust123"
         );
 
         fixture.given(createdEvent).when(command)
@@ -150,7 +146,7 @@ class AccountAggregateTest {
     void testDebitAccountCommandSuccess() {
         AccountCreatedEvent createdEvent = new AccountCreatedEvent(
                 "acc123",now,"system",AccountStatus.ACTIVATED,
-                BigDecimal.valueOf(200),Currency.USD, "cust123","customer@example.com"
+                BigDecimal.valueOf(200),Currency.USD, "cust123"
         );
         fixture.given(createdEvent).when(new DebitAccountCommand(
                         "acc123",
@@ -174,7 +170,7 @@ class AccountAggregateTest {
     void testDebitAccountCommandInsufficientBalance() {
         AccountCreatedEvent createdEvent = new AccountCreatedEvent(
                 "acc123",now,"system",AccountStatus.ACTIVATED,
-                BigDecimal.valueOf(10),Currency.USD, "cust123","customer@example.com"
+                BigDecimal.valueOf(10),Currency.USD, "cust123"
         );
         fixture.given(createdEvent).when(new DebitAccountCommand(
                         "acc123",
@@ -190,7 +186,7 @@ class AccountAggregateTest {
     void testDebitAccountCommandAccountNotActivated() {
         AccountCreatedEvent createdEvent = new AccountCreatedEvent(
                 "acc123",now,"system",AccountStatus.SUSPENDED,
-                BigDecimal.valueOf(200),Currency.USD, "cust123","customer@example.com"
+                BigDecimal.valueOf(200),Currency.USD, "cust123"
         );
         fixture.given(createdEvent).when(new DebitAccountCommand(
                         "acc123",

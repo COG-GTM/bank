@@ -1,0 +1,19 @@
+package org.mounanga.sharedevents.event;
+
+import lombok.Getter;
+
+import java.time.LocalDateTime;
+
+@Getter
+public class CustomerCreatedEvent extends BaseEvent<String> {
+    private final String firstname;
+    private final String lastname;
+    private final String email;
+
+    public CustomerCreatedEvent(String id, LocalDateTime eventDate, String eventBy, String firstname, String lastname, String email) {
+        super(id, eventDate, eventBy);
+        this.firstname = firstname;
+        this.lastname = lastname;
+        this.email = email;
+    }
+}
