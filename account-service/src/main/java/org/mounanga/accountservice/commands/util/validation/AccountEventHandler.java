@@ -15,7 +15,7 @@ public class AccountEventHandler {
     @EventHandler
     public void on(@NotNull AccountCreatedEvent event, @NotNull AccountEmailCustomerIdRepository repository){
         AccountEmailCustomerId emailCustomerId = new AccountEmailCustomerId(
-                event.getId(), event.getEmail(), event.getCustomerId()
+                event.getId(), event.getCustomerId()
         );
         repository.save(emailCustomerId);
     }

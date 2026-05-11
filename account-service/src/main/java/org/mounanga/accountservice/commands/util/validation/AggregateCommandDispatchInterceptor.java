@@ -41,9 +41,6 @@ public class AggregateCommandDispatchInterceptor implements MessageDispatchInter
 
     private void validateCreateAccountCommand(@NotNull CommandMessage<?> m){
         final CreateAccountCommand command = (CreateAccountCommand) m.getPayload();
-        if(repository.findByEmail(command.getEmail()) != null){
-            throw new IllegalArgumentException(String.format("Account with customer's email %s already exists", command.getEmail()));
-        }
         if(repository.findByCustomerId(command.getCustomerId()) != null){
             throw new IllegalArgumentException(String.format("Account with customer's id %s already exists", command.getCustomerId()));
         }

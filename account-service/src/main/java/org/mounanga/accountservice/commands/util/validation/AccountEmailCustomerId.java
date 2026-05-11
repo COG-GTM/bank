@@ -17,8 +17,5 @@ public class AccountEmailCustomerId {
     private String accountId;
 
     @Column(nullable = false, unique = true)
-    private String email;
-
-    @Column(nullable = false, unique = true)
     private String customerId;
 }

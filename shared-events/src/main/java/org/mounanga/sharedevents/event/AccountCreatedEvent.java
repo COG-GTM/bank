@@ -1,0 +1,24 @@
+package org.mounanga.sharedevents.event;
+
+import lombok.Getter;
+import org.mounanga.sharedevents.enums.AccountStatus;
+import org.mounanga.sharedevents.enums.Currency;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Getter
+public class AccountCreatedEvent extends BaseEvent<String> {
+    private final AccountStatus status;
+    private final BigDecimal balance;
+    private final Currency currency;
+    private final String customerId;
+
+    public AccountCreatedEvent(String id, LocalDateTime eventDate, String eventBy, AccountStatus status, BigDecimal balance, Currency currency, String customerId) {
+        super(id, eventDate, eventBy);
+        this.status = status;
+        this.balance = balance;
+        this.currency = currency;
+        this.customerId = customerId;
+    }
+}

@@ -16,6 +16,7 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>shared-events</module>
         <module>discovery-service</module>
         <module>gateway-service</module>
         <module>notification-service</module>
