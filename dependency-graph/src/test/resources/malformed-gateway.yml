@@ -1,0 +1,6 @@
+# Empty spring config with no gateway section
+server:
+  port: 8888
+spring:
+  application:
+    name: GATEWAY-SERVICE
