@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 public class EurekaRegistrationParser implements GraphParser {
 
     private static final Pattern PROPERTIES_LINE = Pattern.compile("^\\s*([^#=]+?)\\s*=\\s*(.*)$");
+    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{[^:}]+:([^}]+)}");
     private static final String EUREKA_URL_KEY = "eureka.client.service-url.defaultzone";
     private static final String APP_NAME_KEY = "spring.application.name";
     private static final String DATASOURCE_URL_KEY = "spring.datasource.url";
@@ -147,11 +148,7 @@ public class EurekaRegistrationParser implements GraphParser {
 
     private String stripPlaceholder(String value) {
         if (value.contains("${")) {
-            int colon = value.indexOf(':');
-            int brace = value.indexOf('}');
-            if (colon > 0 && colon < brace) {
-                return value.substring(colon + 1, brace);
-            }
+            return PLACEHOLDER_PATTERN.matcher(value).replaceAll("$1");
         }
         return value;
     }

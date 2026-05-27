@@ -139,6 +139,31 @@ class EurekaRegistrationParserTest {
         assertThat(graph.getEdgesByType(EdgeType.EUREKA_REGISTER)).isEmpty();
     }
 
+    @Test
+    void parseJdbcUrlWithPlaceholders_extractsCorrectDatabaseName() {
+        String content = """
+                spring.application.name=CUSTOMER-SERVICE
+                spring.datasource.url=jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${DATABASE:customer_db?createDatabaseIfNotExist=true&useSSL=false}
+                """;
+        DependencyGraph graph = parser.parse(content);
+
+        List<Edge> jdbcEdges = graph.getEdgesByType(EdgeType.JDBC);
+        assertThat(jdbcEdges).hasSize(1);
+        assertThat(jdbcEdges.get(0).getMetadata().get("database")).isEqualTo("customer_db");
+    }
+
+    @Test
+    void parseAxonServersWithMultiplePlaceholders_resolvesAllDefaults() {
+        String content = """
+                spring.application.name=ACCOUNT-SERVICE
+                axon.axonserver.servers=${AXON_HOST:localhost}:${AXON_PORT:8124}
+                """;
+        DependencyGraph graph = parser.parse(content);
+
+        Node axonNode = graph.findNode("axon-server").orElseThrow();
+        assertThat(axonNode.getMetadata().get("servers")).isEqualTo("localhost:8124");
+    }
+
     private String loadResource(String name) {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream(name)) {
             if (is == null) throw new IllegalStateException("Resource not found: " + name);
