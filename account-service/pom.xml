@@ -27,9 +27,9 @@
     </scm>
     <properties>
         <java.version>21</java.version>
-        <spring-cloud.version>2023.0.3</spring-cloud.version>
-        <axon.version>4.10.0</axon.version>
-        <axonconsole.version>1.7.1</axonconsole.version>
+        <spring-cloud.version>2023.0.5</spring-cloud.version>
+        <axon.version>4.10.3</axon.version>
+        <axonconsole.version>1.7.3</axonconsole.version>
     </properties>
     <dependencies>
         <dependency>
@@ -90,7 +90,7 @@
         <dependency>
             <groupId>com.auth0</groupId>
             <artifactId>java-jwt</artifactId>
-            <version>4.4.0</version>
+            <version>4.5.0</version>
         </dependency>
         <dependency>
             <groupId>org.axonframework</groupId>
