@@ -18,6 +18,8 @@ The system follows a **microservices architecture** and utilizes various Spring 
 5. **Authentication Service**: Handles user authentication, role-based access control, and authorization for bank personnel.
 6. **Notification Service**: Manages email notifications for various banking operations.
 
+RabbitMQ provides the notifications queue consumed asynchronously by the Notification Service.
+
 ## Technologies
 The project uses a range of technologies to deliver a reliable, scalable, and efficient banking management solution:
 

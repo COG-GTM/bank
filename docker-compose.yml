@@ -26,6 +26,15 @@ services:
     networks:
       - bank-network
 
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - bank-network
+
   notification-service:
     image: notification-service
     container_name: notification-service
@@ -40,9 +49,14 @@ services:
       - MAIL_USERNAME=brody
       - MAIL_PASSWORD=brody
       - EMAIL_SYSTEM=notification@bank.com
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USERNAME=guest
+      - RABBITMQ_PASSWORD=guest
     depends_on:
       - discovery-service
       - gateway-service
+      - rabbitmq
     networks:
       - bank-network
 
