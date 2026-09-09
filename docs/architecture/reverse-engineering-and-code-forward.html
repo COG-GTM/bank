@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bank — Reverse-Engineering &amp; Code-Forward Architecture</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root{--ink:#1f2933;--muted:#52606d;--line:#d9e2ec;--obs:#e3f2fd;--obs-b:#1565c0;--prop:#e8f5e9;--prop-b:#2e7d32;--amber:#fff3cd;--amber-b:#b26a00;--bad:#fdecea}
+  *{box-sizing:border-box}
+  body{font:11pt/1.42 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);margin:0;background:#fff}
+  main{max-width:960px;margin:0 auto;padding:28px 32px 40px}
+  h1{font-size:22pt;margin:0 0 4px}
+  h2{font-size:15pt;margin:28px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--line)}
+  h3{font-size:12pt;margin:16px 0 6px}
+  p{margin:6px 0}
+  .sub{color:var(--muted);font-size:10pt}
+  .tag{display:inline-block;font-size:8.5pt;font-weight:600;letter-spacing:.03em;text-transform:uppercase;padding:1px 7px;border-radius:3px;vertical-align:middle;margin-left:8px}
+  .tag.obs{background:var(--obs);color:var(--obs-b);border:1px solid var(--obs-b)}
+  .tag.prop{background:var(--prop);color:var(--prop-b);border:1px solid var(--prop-b)}
+  section.obs{border-left:4px solid var(--obs-b);padding-left:14px}
+  section.prop{border-left:4px solid var(--prop-b);padding-left:14px}
+  table{border-collapse:collapse;width:100%;font-size:9.5pt;margin:8px 0 12px}
+  th,td{border:1px solid var(--line);padding:4px 6px;text-align:left;vertical-align:top}
+  th{background:#f5f7fa}
+  td.bad{background:var(--bad)}
+  code{font:9pt ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#f5f7fa;padding:0 3px;border-radius:2px}
+  .mermaid{background:#fff;border:1px solid var(--line);border-radius:4px;padding:8px;margin:10px 0}
+  .cap{font-size:9pt;color:var(--muted);margin:-4px 0 10px}
+  .legend{font-size:9pt;color:var(--muted)}
+  .legend span{display:inline-block;width:12px;height:12px;vertical-align:-2px;margin:0 4px 0 10px;border:1px solid #999}
+  ul{margin:4px 0 8px 18px;padding:0}
+  li{margin:2px 0}
+  footer{margin-top:32px;padding-top:10px;border-top:2px solid var(--line);font-size:9pt;color:var(--muted)}
+  @page{size:A4;margin:14mm 12mm}
+  @media print{body{font-size:9.5pt}main{max-width:none;padding:0}h2{break-after:avoid;margin-top:16px}.mermaid,table{break-inside:avoid}section{break-inside:auto}}
+</style>
+</head>
+<body>
+<main>
+<h1>bank — Reverse-Engineering &amp; Code-Forward Architecture</h1>
+<p class="sub">Repository <code>COG-GTM/bank</code> · commit <code>7998b9b</code> · Spring Boot 3.3.4 / Spring Cloud 2023.0.3 / Java 21 / Axon 4.10 · generated 2026-09-09 ·
+<span class="legend"><span style="background:var(--obs)"></span>observed (sections 2–5) <span style="background:var(--prop)"></span>proposed (sections 6–7) <span style="background:var(--amber)"></span>external / infrastructure</span></p>
+
+<!-- 1 GOALS -->
+<section id="goals">
+<h2>1. Goals</h2>
+<p>This document is a knowledge base of the <code>bank</code> service portfolio as implemented at commit <code>7998b9b</code>, and a proposal for a domain-driven re-architecture delivered incrementally (strangler pattern). <strong>It is not a platform, runtime or language upgrade</strong>: the stack (Java 21, Spring Boot 3.3.4, Axon, MySQL) is kept, and this run changed no application code, build file or schema.</p>
+<ul>
+  <li>Record, with a <code>file:line</code> citation, who owns each table, which services call which, and which business rules are actually enforced.</li>
+  <li>Cross-check the repository's own README claims against the code (code wins).</li>
+  <li>Propose bounded contexts with one owner per table, one anti-corruption layer (ACL) per external system, and a roadmap of slices each with a measurable "done when".</li>
+</ul>
+<p class="sub">Detail beyond this document lives in the inventory produced alongside it (<code>~/inventory/bank.md</code>, 130+ cited facts). No build, test or run script was executed.</p>
+</section>
+
+<!-- 2 SYSTEM AS-IS -->
+<section id="asis" class="obs">
+<h2>2. System as-is <span class="tag obs">observed</span></h2>
+<p>Six Maven modules (<code>pom.xml:19-26</code>), each a Spring Boot deployable. Four have a MySQL schema of their own; the account service additionally uses Axon Server as its event store. The Angular UI is a separate repository (<code>README.md:154</code>). All inter-service calls are synchronous OpenFeign over Eureka names; none go through the gateway.</p>
+
+<div class="mermaid" id="fig1">
+flowchart TB
+  classDef ext fill:#fff3cd,stroke:#b26a00,color:#1f2933
+  classDef svc fill:#e3f2fd,stroke:#1565c0,color:#1f2933
+  classDef db fill:#f5f7fa,stroke:#52606d,color:#1f2933
+  UI["Angular bank-ui<br/>(separate repo, :4200)"]:::ext
+  GW["gateway-service :8888<br/>Spring Cloud Gateway · no auth"]:::svc
+  EU["discovery-service :8761<br/>Eureka"]:::svc
+  subgraph BIZ["Business services (JWT verified in each)"]
+    AUTH["authentication-service :8885<br/>owns user, role, verification"]:::svc
+    CUST["customer-service :8886<br/>owns customer"]:::svc
+    ACC["account-service :8884<br/>Axon CQRS · owns account, operation,<br/>counter, account_email_customer_id"]:::svc
+  end
+  NOTIF["notification-service :8887<br/>SMTP adapter · no security"]:::svc
+  AX["Axon Server :8124<br/>event store"]:::ext
+  MY["MySQL ×3 schemas<br/>db_user…, data_customers_re,<br/>comptebancairennn"]:::ext
+  SMTP["SMTP relay"]:::ext
+  UI -->|"HTTP /SERVICE-ID/bank/…"| GW
+  GW -.->|"lookup"| EU
+  GW -->|"discovery routes"| AUTH & CUST & ACC & NOTIF
+  ACC -->|"Feign GET /intern/verify/{id}"| CUST
+  ACC -->|"Feign POST /mailing/send ✗"| NOTIF
+  AUTH -->|"Feign POST /notifications/send"| NOTIF
+  ACC <-->|"gRPC"| AX
+  AUTH & CUST & ACC --> MY
+  NOTIF --> SMTP
+</div>
+<p class="cap">Figure 1 — Deployment as declared in each module's <code>application.properties</code>; ports are the service's own (<code>docker-compose.yml</code> maps three of them differently, see F11). Amber = external / infrastructure.</p>
+
+<h3>Data ownership</h3>
+<table>
+<tr><th>Store / table</th><th>Writer (module → class:line)</th><th>Readers</th><th>Note</th></tr>
+<tr><td><code>user</code>, <code>role</code>, <code>user_role</code></td><td>authentication-service → <code>UserServiceImpl:46-115</code>, <code>RoleServiceImpl:38-60</code>, seed <code>AuthenticationServiceApplication:43-73</code></td><td>authentication-service</td><td>duplicates person identity (name, cin, email, dob) — <code>User.java:28-51</code></td></tr>
+<tr><td><code>verification</code></td><td>authentication-service → <code>PasswordServiceImpl:48,74,87</code></td><td>authentication-service</td><td>6-digit code, 10 min</td></tr>
+<tr><td><code>customer</code></td><td>customer-service → <code>CustomerServiceImpl:76,89,98</code></td><td>customer-service</td><td class="bad"><code>ddl-auto=create</code>: dropped on every start (<code>application.properties:13</code>)</td></tr>
+<tr><td><code>account</code>, <code>operation</code> (read model)</td><td>account-service query side → <code>AccountEventHandlerService:40-101</code></td><td><code>AccountQueryHandlerService:39-76</code></td><td>denormalised <code>customerId</code>, <code>email</code> from customer-service (<code>Account.java:36-40</code>)</td></tr>
+<tr><td><code>account_email_customer_id</code></td><td>account-service command side → <code>AccountEventHandler:20,25</code></td><td><code>AggregateCommandDispatchInterceptor:44-54</code></td><td>second projection of the same events, subscribing mode (<code>application.properties:26</code>)</td></tr>
+<tr><td><code>counter</code></td><td>account-service → <code>IdGeneratorImpl:24</code></td><td>same</td><td>account number = <code>%09d</code> of IDENTITY</td></tr>
+<tr><td>Axon event store (<code>AccountAggregate</code>)</td><td>account-service → <code>AccountAggregate:49-150</code></td><td>both projections above</td><td>source of truth for balances</td></tr>
+</table>
+<p>No table has more than one writing <em>module</em>, and no Maven module is shared. The <em>concept</em> "person identity / customer e-mail" is nevertheless written by three services with no synchronising event (F3), and contracts are duplicated by copy-paste: <code>NotificationRequestDTO</code> ×3, <code>CustomerExistResponseDTO</code> ×2, <code>JWTAuthorizationFilter</code> ×3.</p>
+</section>
+
+<!-- 3 BUSINESS LOGIC -->
+<section id="rules" class="obs">
+<h2>3. Business logic <span class="tag obs">observed</span></h2>
+<table>
+<tr><th>#</th><th>Rule as implemented</th><th>Source</th></tr>
+<tr><td>R1</td><td>Creating an account applies <code>AccountActivatedEvent</code> from inside the <code>AccountCreatedEvent</code> sourcing handler; status CREATED is never observable.</td><td><code>AccountAggregate.java:52-65</code>; test <code>AccountAggregateTest.java:33-64</code></td></tr>
+<tr><td>R2</td><td>One account per customer id and per e-mail, enforced by a command dispatch interceptor reading the <code>account_email_customer_id</code> table.</td><td><code>AggregateCommandDispatchInterceptor.java:42-49</code></td></tr>
+<tr><td>R3</td><td>Customer must exist (Feign <code>checkCustomerExist</code>) before <code>CreateAccountCommand</code>; any exception ⇒ "customer not found".</td><td><code>AccountCommandRestController.java:43-47,90-97</code></td></tr>
+<tr><td>R4</td><td>Status update: ACTIVATED or CREATED ⇒ Activate; SUSPENDED ⇒ Suspend; DELETED ⇒ <code>IllegalArgumentException</code>.</td><td><code>AccountCommandRestController.java:52-63</code></td></tr>
+<tr><td>R5</td><td>Credit: amount ≥ 0 and account ACTIVATED. Debit: balance ≥ amount (checked before status) and ACTIVATED.</td><td><code>AccountAggregate.java:100-132</code></td></tr>
+<tr><td>R6</td><td>Transfer = debit(from) then credit(to); if credit throws, a plain credit to <code>from</code> is issued with the same description. No transfer id, no currency check.</td><td><code>TransferProxy.java:23-45</code>; <code>CommandFactory.java:103-112</code></td></tr>
+<tr><td>R7</td><td>Delete requires balance ≤ 0; hard-deletes read-model account and operations.</td><td><code>AccountAggregate.java:143-161</code>; <code>AccountEventHandlerService.java:68-77</code></td></tr>
+<tr><td>R8</td><td>Every account event e-mails the account's e-mail copy (async, fire-and-forget).</td><td><code>AccountEventHandlerService.java:42-103</code></td></tr>
+<tr><td>R9</td><td>Customer uniqueness on <code>cin</code> and <code>email</code>; age ≥ 18 is declared but the controller has no <code>@Valid</code>, so it is not enforced. Delete is unconditional.</td><td><code>CustomerServiceImpl.java:107-118,94-98</code>; <code>CustomerRestController.java:44,49</code></td></tr>
+<tr><td>R10</td><td>Login: DAO auth → enabled check → HS256 JWT (<code>sub</code>, <code>roles[]</code>, <code>fullName</code>, <code>id</code>, 7-day expiry) → lastLogin → e-mail.</td><td><code>AuthenticationServiceImpl.java:47-63,97-107</code></td></tr>
+<tr><td>R11</td><td>Password reset: one pending code per e-mail, 10-minute expiry, 429 while unexpired; password policy (≥8, 2 lower, 2 upper, 2 digits, 1 special) declared but no <code>@Valid</code> in controllers.</td><td><code>PasswordServiceImpl.java:35-75</code>; <code>PasswordValidator.java:9-35</code></td></tr>
+<tr><td>R12</td><td>Roles USER/ADMIN/SUPER_ADMIN seeded at start-up; only authentication-service has <code>@PreAuthorize</code>; <code>USER</code> may toggle any user's enabled flag.</td><td><code>AuthenticationServiceApplication.java:37-46</code>; <code>UserRestController.java:39-43</code></td></tr>
+</table>
+<p><strong>Time:</strong> 9 <code>LocalDateTime.now()</code> calls at the REST edge (<code>CommandFactory.java:25-106</code>, <code>AccountCommandRestController.java:102</code>) are copied unchanged into events; no clock abstraction, time zone or business date exists. <strong>Money:</strong> <code>BigDecimal</code> with no <code>setScale</code>/<code>RoundingMode</code> anywhere; currency is an attribute of the account only (<code>Account.java:32-34</code>) and absent from operations and transfers.</p>
+
+<div class="mermaid" id="fig2">
+sequenceDiagram
+  autonumber
+  participant UI as Angular UI
+  participant GW as gateway-service
+  participant ACC as account-service<br/>command side
+  participant CUST as customer-service
+  participant AX as Axon Server
+  participant Q as account-service<br/>query side
+  participant N as notification-service
+  UI->>GW: POST /ACCOUNT-SERVICE/bank/accounts/commands/create {customerId, currency}
+  GW->>ACC: route (JWT verified in ACC)
+  ACC->>CUST: Feign GET /bank/intern/verify/{id}
+  Note over CUST: no controller for /intern/** — 404<br/>(permitAll in SecurityConfiguration:29)
+  CUST-->>ACC: error → caught → null
+  ACC-->>UI: 4xx CustomerNotFoundException
+  Note over ACC,AX: Intended path if verify existed:
+  ACC->>ACC: counter.save() → id %09d, LocalDateTime.now()
+  ACC->>AX: CreateAccountCommand → AccountCreatedEvent + AccountActivatedEvent
+  AX-->>Q: events (tracking processor)
+  Q->>Q: save account, operation read model
+  Q-)N: Feign POST /bank/mailing/send (async) — path not served
+  AX-->>ACC: AccountEventHandler → account_email_customer_id (subscribing)
+</div>
+<p class="cap">Figure 2 — Account creation, the flow that touches every integration. Steps 3–5 show the behaviour as committed (<code>CustomerRestClient.java:11</code>, <code>AccountCommandRestController.java:44-47</code>); steps 6–11 the intended path.</p>
+</section>
+
+<!-- 4 INTEGRATION POINTS -->
+<section id="integration" class="obs">
+<h2>4. Integration points <span class="tag obs">observed</span></h2>
+<div class="mermaid" id="fig3">
+flowchart LR
+  classDef ext fill:#fff3cd,stroke:#b26a00,color:#1f2933
+  classDef svc fill:#e3f2fd,stroke:#1565c0,color:#1f2933
+  classDef bad stroke:#c62828,stroke-width:2px,stroke-dasharray:4 3
+  subgraph IN["Inside the portfolio"]
+    ACC["account-service<br/>2 Feign clients, 1 Axon connection"]:::svc
+    AUTH["authentication-service<br/>1 Feign client"]:::svc
+    CUST["customer-service<br/>no outbound calls"]:::svc
+    NOTIF["notification-service<br/>JavaMailSender + Thymeleaf"]:::svc
+  end
+  AX["Axon Server<br/>gRPC · Jackson events"]:::ext
+  SMTP["SMTP host<br/>MAIL_HOST:MAIL_PORT"]:::ext
+  DB["MySQL<br/>3 schemas, JDBC"]:::ext
+  UI["bank-ui (Angular)<br/>CORS localhost:4200"]:::ext
+  ACC -->|"GET /bank/intern/verify/{id}<br/>direct, no JWT forwarded"| CUST
+  ACC -->|"POST /bank/mailing/send<br/>direct · path not served"| NOTIF
+  AUTH -->|"POST /bank/notifications/send<br/>direct · unauthenticated"| NOTIF
+  ACC <--> AX
+  NOTIF --> SMTP
+  ACC & AUTH & CUST --> DB
+  UI -.->|"via gateway only"| IN
+  linkStyle 0,1 stroke:#c62828,stroke-width:2px,stroke-dasharray:4 3
+</div>
+<p class="cap">Figure 3 — External boundary. Amber = external systems; red dashed = calls whose target does not exist in the callee at this commit.</p>
+<table>
+<tr><th>#</th><th>Caller → callee</th><th>Protocol / format</th><th>Direction</th><th>Gateway or direct</th><th>Evidence</th></tr>
+<tr><td>I1</td><td>account → customer</td><td>OpenFeign <code>CUSTOMER-SERVICE</code>, <code>GET /bank/intern/verify/{id}</code>, JSON</td><td>sync</td><td>direct</td><td class="bad"><code>CustomerRestClient.java:8-12</code>; no matching controller (<code>CustomerRestController.java:10</code>)</td></tr>
+<tr><td>I2</td><td>account → notification</td><td>OpenFeign, <code>POST /bank/mailing/send</code>, JSON</td><td>async fire-and-forget</td><td>direct</td><td class="bad"><code>queries/web/NotificationRestClient.java:12</code> vs served <code>/notifications/send</code> (<code>NotificationRestController.java:12,21</code>)</td></tr>
+<tr><td>I3</td><td>authentication → notification</td><td>OpenFeign, <code>POST /bank/notifications/send</code>, JSON</td><td>async</td><td>direct</td><td><code>authentication-service/…/NotificationRestClient.java:8-12</code></td></tr>
+<tr><td>I4</td><td>notification → SMTP</td><td>JavaMailSender, MIME multipart, Thymeleaf template</td><td>outbound</td><td>external</td><td><code>NotificationServiceImpl.java:29-71</code></td></tr>
+<tr><td>I5</td><td>account ↔ Axon Server</td><td>gRPC, Jackson-serialised events</td><td>bidirectional</td><td>external</td><td><code>application.properties:20-26</code></td></tr>
+<tr><td>I6</td><td>UI → gateway → services</td><td>HTTP, <code>/{SERVICE-ID}/bank/…</code> discovery routes, CORS</td><td>inbound</td><td>gateway (no auth filter)</td><td><code>GatewayServiceApplication.java:32-36</code>; <code>application.yml:10-25</code></td></tr>
+<tr><td>—</td><td>JWT propagation on Feign</td><td>none: no <code>RequestInterceptor</code> in the repo</td><td>—</td><td>—</td><td>hence <code>/intern/**</code> is <code>permitAll</code> (<code>SecurityConfiguration.java:29</code>)</td></tr>
+</table>
+<p>No messaging (JMS/Kafka/Rabbit), no scheduled jobs, no files, no mainframe or legacy artefacts were found.</p>
+</section>
+
+<!-- 5 FINDINGS -->
+<section id="findings" class="obs">
+<h2>5. Findings <span class="tag obs">observed</span></h2>
+<table>
+<tr><th>#</th><th>Finding</th><th>Root cause</th><th>Evidence</th></tr>
+<tr><td>F1</td><td>Account creation depends on a customer endpoint that does not exist; all errors collapse to "customer not found", so <code>POST /accounts/commands/create</code> cannot succeed at this commit.</td><td>external-system knowledge outside a single adapter</td><td><code>CustomerRestClient.java:11</code>; <code>CustomerRestController.java:10-55</code>; <code>AccountCommandRestController.java:90-97</code></td></tr>
+<tr><td>F2</td><td>Two clients for the same callee disagree on the path (<code>/mailing/send</code> vs <code>/notifications/send</code>); the DTO is copied three times. Account e-mails are lost silently inside <code>@Async</code>.</td><td>duplicated contract, no ACL</td><td><code>account-service/…/NotificationRestClient.java:12</code>; <code>NotificationRestController.java:21</code>; <code>authentication-service/…/NotificationRestClient.java:11</code></td></tr>
+<tr><td>F3</td><td>Person identity is stored by three services (<code>customer</code>, <code>user</code>, <code>account.email/customerId</code>) with no event keeping them consistent; customer delete is unconditional.</td><td>shared persistence model by copy</td><td><code>User.java:28-51</code>; <code>Account.java:36-40</code>; <code>CustomerServiceImpl.java:94-98</code></td></tr>
+<tr><td>F4</td><td>Wall-clock time is stamped at the REST edge and copied into events; no clock abstraction, zone or business date.</td><td>time not modelled</td><td><code>CommandFactory.java:25-106</code>; <code>EventFactory.java:23-97</code></td></tr>
+<tr><td>F5</td><td>Money has no scale/rounding policy; currency is not on operations or transfers, so cross-currency transfers are unchecked; balance is derived by two independent code paths.</td><td>money not modelled</td><td><code>TransferRequestDTO.java:9-21</code>; <code>AccountAggregate.java:118,138</code>; <code>AccountEventHandlerService.java:126-130</code></td></tr>
+<tr><td>F6</td><td>Transfer is two independent commands with a compensating plain credit; no transfer id, saga, or handling of compensation failure.</td><td>cross-aggregate consistency not modelled</td><td><code>TransferProxy.java:23-45</code></td></tr>
+<tr><td>F7</td><td>Activation is a side effect of the created-event sourcing handler; the CREATED state is unreachable and "update to CREATED" means Activate.</td><td>state transitions not modelled</td><td><code>AccountAggregate.java:52-65</code>; <code>AccountCommandRestController.java:54</code></td></tr>
+<tr><td>F8</td><td>Security is copy-pasted per service: no auth at the gateway; notification-service has no security dependency and is reachable unauthenticated through the gateway; no role checks in account/customer; <code>USER</code> can disable any user; one default HMAC secret in three services (hard-coded in customer-service); generated admin password written to the log.</td><td>cross-cutting concern duplicated</td><td><code>notification-service/pom.xml</code>; <code>UserRestController.java:39-43</code>; <code>customer-service/…/application.properties:1</code>; <code>AuthenticationServiceApplication.java:66-74</code></td></tr>
+<tr><td>F9</td><td>Declared validation is not enforced (no <code>@Valid</code> in customer and authentication controllers: age ≥ 18, e-mail format, password policy); <code>GET get-operation/{id}</code> always returns <code>null</code>.</td><td>declaration/enforcement drift</td><td><code>CustomerRestController.java:44,49</code>; <code>UserRestController.java:22-34</code>; <code>AccountQueryRestController.java:50-59</code></td></tr>
+<tr><td>F10</td><td>Two projections of one event stream run in different processor modes; uniqueness is checked against the eventually-consistent side table, so concurrent creates for one customer can both pass.</td><td>validation read model not separated</td><td><code>AccountEventHandler.java:12-27</code>; <code>AggregateCommandDispatchInterceptor.java:42-49</code>; <code>application.properties:26</code></td></tr>
+<tr><td>F11</td><td>Deployment drift: compose declares a <code>user-service</code> directory that does not exist, maps three host ports to the wrong <code>server.port</code>, three modules have no Dockerfile, discovery's Dockerfile copies a 0.0.3 jar vs pom 0.0.1-SNAPSHOT; customer schema is recreated on every start.</td><td>ops config not derived from module manifest</td><td><code>docker-compose.yml:35,49-55,78,101</code>; <code>discovery-service/Dockerfile:9</code>; <code>customer-service/…/application.properties:13</code></td></tr>
+<tr><td>F12</td><td>README claims Angular UI, Jenkinsfile, SonarQube and Nexus — none present in the repo; <code>User.roles</code> is <code>@ManyToMany(cascade=ALL)</code>, so deleting a user cascades to shared <code>role</code> rows.</td><td>docs / ownership drift</td><td><code>README.md:29-33,112-113</code>; <code>User.java:79-81</code>; <code>UserServiceImpl.java:77</code></td></tr>
+</table>
+<h3>README cross-check</h3>
+<table>
+<tr><th>Claim</th><th>Verdict</th><th>Evidence</th></tr>
+<tr><td>Six microservices, Eureka, Gateway, Axon Server started first (<code>README.md:38-46,134-139</code>)</td><td>confirmed</td><td><code>pom.xml:19-26</code>; <code>application.properties:20-22</code></td></tr>
+<tr><td>Inter-service communication via OpenFeign (<code>README.md:27,124</code>)</td><td>differs</td><td>true in form; 2 of 3 clients target paths the callee does not serve (I1, I2)</td></tr>
+<tr><td>Angular frontend (<code>README.md:8,29</code>)</td><td>not found in repo</td><td>external <code>bank-ui</code> (<code>README.md:154</code>)</td></tr>
+<tr><td>Jenkinsfile, SonarQube, Nexus (<code>README.md:31-33,112-129</code>)</td><td>not found</td><td>no Jenkinsfile, no plugin in any <code>pom.xml</code></td></tr>
+<tr><td>Module READMEs: endpoint and role tables</td><td>confirmed</td><td><code>UserRestController</code>, <code>RoleRestController</code>, <code>AccountCommandRestController:77-81</code></td></tr>
+<tr><td>Compose ports per service</td><td>differs</td><td>F11</td></tr>
+</table>
+</section>
+
+<!-- 6 RE-ARCHITECTURE -->
+<section id="target" class="prop">
+<h2>6. Re-architecture <span class="tag prop">proposed</span></h2>
+<p>The ownership table yields five business contexts plus an edge. Each table gets exactly one owner; each external system sits behind exactly one ACL; reporting is a read model fed by events; contexts exchange past-tense events, never copied DTOs.</p>
+<div class="mermaid" id="fig4">
+flowchart LR
+  classDef ctx fill:#e8f5e9,stroke:#2e7d32,color:#1f2933
+  classDef ext fill:#fff3cd,stroke:#b26a00,color:#1f2933
+  EDGE["Edge<br/>gateway + discovery<br/>verifies JWT once, applies role policy"]:::ctx
+  IAM["Identity &amp; Access<br/>owns user, role, user_role, verification<br/>▲ UserRegistered, UserDisabled, PasswordReset"]:::ctx
+  CUS["Customer<br/>owns customer<br/>▲ CustomerRegistered / Updated / Deleted"]:::ctx
+  LED["Account Ledger (Axon)<br/>owns event store, counter, uniqueness set<br/>▲ AccountOpened, Credited, Debited, Closed,<br/>FundsTransferred, TransferFailed"]:::ctx
+  REP["Account Reporting<br/>owns account, operation projections<br/>+ customer snapshot · rebuildable"]:::ctx
+  NACL["Notification ACL<br/>owns notification_outbox<br/>◄ SendNotification · ▲ NotificationSent"]:::ctx
+  SMTP["SMTP"]:::ext
+  UIX["bank-ui"]:::ext
+  UIX --> EDGE
+  EDGE --> IAM & CUS & LED & REP
+  CUS -->|"CustomerRegistered / Deleted"| LED
+  LED -->|"account events"| REP
+  CUS -->|"customer events"| REP
+  LED -->|"account events"| NACL
+  IAM -->|"PasswordReset, UserRegistered"| NACL
+  NACL --> SMTP
+</div>
+<p class="cap">Figure 4 — Target context map (7 nodes). ▲ published events (past tense), ◄ accepted commands (imperative). Amber = external.</p>
+<h3>Design rules</h3>
+<ul>
+  <li>One owning context per table; other contexts hold only event-derived snapshots (fixes F3, F10).</li>
+  <li>One ACL per external system (SMTP → Notification ACL; Axon Server stays internal to Ledger); the ACL owns the contract, callers bind to it via a contract test (fixes F1, F2).</li>
+  <li><code>Money(amount, currency)</code> and an injected <code>Clock</code> are domain types; events carry the currency and the ledger timestamp (fixes F4, F5).</li>
+  <li>State transitions are explicit commands (<code>OpenAccount</code> → <code>ActivateAccount</code>); <code>TransferFunds</code> is a saga with a transfer id and <code>TransferFailed</code> event (fixes F6, F7).</li>
+  <li>JWT verified once at the edge with a single secret source; role policy per route; validation enforced at every context boundary (fixes F8, F9).</li>
+  <li>Deployment manifests derive from the module list; schemas managed by migrations, <code>ddl-auto=validate</code> (fixes F11).</li>
+</ul>
+<h3>Target ownership map</h3>
+<table>
+<tr><th>Context</th><th>Owns</th><th>Accepts (commands)</th><th>Publishes (events)</th></tr>
+<tr><td>Identity &amp; Access</td><td><code>user</code>, <code>role</code>, <code>user_role</code>, <code>verification</code></td><td>RegisterUser, AssignRole, ResetPassword, IssueToken</td><td>UserRegistered, UserDisabled, PasswordReset</td></tr>
+<tr><td>Customer</td><td><code>customer</code></td><td>RegisterCustomer, UpdateCustomer, DeleteCustomer</td><td>CustomerRegistered, CustomerUpdated, CustomerDeleted</td></tr>
+<tr><td>Account Ledger</td><td>Axon event store, <code>counter</code>, ledger-owned uniqueness set (replaces <code>account_email_customer_id</code>)</td><td>OpenAccount, ActivateAccount, SuspendAccount, CreditAccount, DebitAccount, TransferFunds, CloseAccount</td><td>AccountOpened, AccountActivated, AccountSuspended, AccountCredited, AccountDebited, AccountClosed, FundsTransferred, TransferFailed</td></tr>
+<tr><td>Account Reporting</td><td><code>account</code>, <code>operation</code> projections, customer snapshot</td><td>(rebuild from events)</td><td>—</td></tr>
+<tr><td>Notification ACL</td><td><code>notification_outbox</code> (new); SMTP</td><td>SendNotification</td><td>NotificationSent, NotificationFailed</td></tr>
+<tr><td>Edge</td><td>—</td><td>AuthenticateRequest</td><td>—</td></tr>
+</table>
+</section>
+
+<!-- 7 ROADMAP -->
+<section id="roadmap" class="prop">
+<h2>7. Roadmap <span class="tag prop">proposed</span></h2>
+<p>Six strangler slices; none completed at this run. The ACL goes first (highest risk, least business logic), then the context with the fewest dependants (Customer: one dependant), then the edge, then the ledger, the read model, and deployment alignment.</p>
+<div class="mermaid" id="fig5">
+flowchart LR
+  classDef todo fill:#e8f5e9,stroke:#2e7d32,color:#1f2933
+  S1["S1 Notification ACL<br/>one contract, auth, outbox"]:::todo
+  S2["S2 Customer contract<br/>verify endpoint + customer events"]:::todo
+  S3["S3 Edge security<br/>JWT at gateway, one secret, role policy"]:::todo
+  S4["S4 Ledger domain<br/>Money, Clock, explicit Activate, Transfer saga"]:::todo
+  S5["S5 Reporting context<br/>projections moved, uniqueness in ledger"]:::todo
+  S6["S6 Deployment alignment<br/>compose from module list, migrations"]:::todo
+  S1 --> S2 --> S3 --> S4 --> S5 --> S6
+</div>
+<p class="cap">Figure 5 — Slice order. All slices open (0 / 6 complete).</p>
+<table>
+<tr><th>#</th><th>Slice</th><th>Done when</th><th>Status</th></tr>
+<tr><td>S1</td><td>Notification ACL: publish one contract (<code>POST /notifications/send</code>), bind both callers by contract test, require auth, add outbox with retry</td><td>Contract test green for account and authentication callers; unauthenticated POST via gateway → 401; SMTP failure retried from outbox</td><td>open</td></tr>
+<tr><td>S2</td><td>Customer contract: serve the verify endpoint under an internal contract; emit CustomerRegistered/Updated/Deleted; reject delete while an account exists</td><td>Account-creation end-to-end passes; deleting a customer with an open account is rejected; Ledger consumes CustomerDeleted</td><td>open</td></tr>
+<tr><td>S3</td><td>Edge security: JWT validated at gateway, single secret source, role policy per route, per-service filters removed</td><td>0 copies of <code>JWTAuthorizationFilter</code>; <code>USER</code> cannot credit/debit or toggle other users; no default secret in repo</td><td>open</td></tr>
+<tr><td>S4</td><td>Ledger domain: <code>Money</code> value object with scale and currency, injected <code>Clock</code>, explicit <code>ActivateAccount</code>, <code>TransferFunds</code> saga with transfer id</td><td>Cross-currency transfer rejected by test; replaying the event store reproduces every balance; failed transfer leaves <code>TransferFailed</code> plus compensating event</td><td>open</td></tr>
+<tr><td>S5</td><td>Reporting context: projections served by a dedicated read-model service; uniqueness moved to ledger-owned set validation; <code>get-operation</code> returns a body</td><td>All queries served from Reporting; concurrent duplicate OpenAccount → exactly one success; <code>GET get-operation/{id}</code> returns 200 with body</td><td>open</td></tr>
+<tr><td>S6</td><td>Deployment alignment: compose and Dockerfiles generated from the module list; <code>ddl-auto=validate</code> with migrations</td><td><code>docker compose up</code> reaches six healthy services on each module's declared <code>server.port</code></td><td>open</td></tr>
+</table>
+</section>
+
+<footer>
+Repository <a href="https://github.com/COG-GTM/bank">COG-GTM/bank</a> · commit <code>7998b9b18c4be74fb1058eb545cbbec4893158a1</code> · generated 2026-09-09 · method: read-only source inspection, no build or runtime executed ·
+playbook: <a href="https://app.devin.ai/playbooks">Reverse-Engineering &amp; Code-Forward Architecture (any legacy service portfolio)</a>
+</footer>
+</main>
+<script>mermaid.initialize({startOnLoad:true, theme:'neutral'});</script>
+</body>
+</html>
