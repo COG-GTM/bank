@@ -118,6 +118,29 @@ services:
     networks:
       - bank-network
 
+  disputes-service:
+    image: disputes-service
+    container_name: disputes-service
+    build:
+      context: ./disputes-service
+    ports:
+      - "8883:8883"
+    environment:
+      - DISCOVERY_SERVICE=http://discovery-service:8761/eureka/
+      - MYSQL_USER=root
+      - MYSQL_PWD=root
+      - MYSQL_HOST=172.18.0.2
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=disputes_db
+      - JWT_SECRET=AaZzBbCcYyDdXxEeWwFf
+      - JWT_EXPIRATION=604800000
+    depends_on:
+      - discovery-service
+      - gateway-service
+      - account-service
+    networks:
+      - bank-network
+
 networks:
   bank-network:
     external: true
