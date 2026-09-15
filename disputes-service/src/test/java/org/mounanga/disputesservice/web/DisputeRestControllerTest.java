@@ -162,6 +162,30 @@ class DisputeRestControllerTest {
     }
 
     @Test
+    @WithMockUser
+    void testListDisputesInvalidPagination() throws Exception {
+        mockMvc.perform(get("/disputes/list").param("accountId", "ACC-1").param("page", "-1").param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
+    }
+
+    @Test
+    @WithMockUser
+    void testOpenDisputeDescriptionTooLong() throws Exception {
+        DisputeRequestDTO request = DisputeRequestDTO.builder()
+                .accountId("ACC-1")
+                .amount(BigDecimal.TEN)
+                .reason(DisputeReason.OTHER)
+                .description("x".repeat(1025))
+                .build();
+
+        mockMvc.perform(post("/disputes/open")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void testUnauthenticatedRequestIsRejected() throws Exception {
         mockMvc.perform(get("/disputes/get/DSP-1"))
                 .andExpect(status().isForbidden());

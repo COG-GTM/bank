@@ -1,5 +1,7 @@
 package org.mounanga.disputesservice.service.implementation;
 
+import feign.FeignException;
+import feign.Request;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +17,7 @@ import org.mounanga.disputesservice.enums.Currency;
 import org.mounanga.disputesservice.enums.DisputeReason;
 import org.mounanga.disputesservice.enums.DisputeStatus;
 import org.mounanga.disputesservice.exception.AccountNotFoundException;
+import org.mounanga.disputesservice.exception.AccountServiceUnavailableException;
 import org.mounanga.disputesservice.exception.DisputeNotFoundException;
 import org.mounanga.disputesservice.exception.FieldValidationException;
 import org.mounanga.disputesservice.repository.DisputeRepository;
@@ -26,6 +29,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -93,12 +97,34 @@ class DisputeServiceImplTest {
                 .reason(DisputeReason.OTHER)
                 .build();
 
-        when(accountRestClient.getAccountById("UNKNOWN")).thenThrow(new RuntimeException("404"));
+        when(accountRestClient.getAccountById("UNKNOWN")).thenThrow(feignException(404));
 
         assertThrows(AccountNotFoundException.class, () -> disputeService.openDispute(dto));
 
         verify(accountRestClient, times(1)).getAccountById("UNKNOWN");
         verify(disputeRepository, never()).save(any(Dispute.class));
+    }
+
+    @Test
+    void testOpenDisputeAccountServiceUnavailable() {
+        DisputeRequestDTO dto = DisputeRequestDTO.builder()
+                .accountId("ACC-1")
+                .amount(BigDecimal.TEN)
+                .reason(DisputeReason.OTHER)
+                .build();
+
+        when(accountRestClient.getAccountById("ACC-1")).thenThrow(feignException(503));
+
+        assertThrows(AccountServiceUnavailableException.class, () -> disputeService.openDispute(dto));
+
+        verify(disputeRepository, never()).save(any(Dispute.class));
+    }
+
+    private static FeignException feignException(int status) {
+        Request request = Request.create(Request.HttpMethod.GET, "/bank/accounts/queries/get-account/x",
+                Map.of(), null, null, null);
+        return FeignException.errorStatus("getAccountById",
+                feign.Response.builder().status(status).request(request).headers(Map.of()).build());
     }
 
     @Test

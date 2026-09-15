@@ -3,6 +3,7 @@ package org.mounanga.disputesservice.dto;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.mounanga.disputesservice.enums.DisputeReason;
 
@@ -25,5 +26,6 @@ public class DisputeRequestDTO {
     @NotNull(message = "field 'reason' is mandatory: it can not be null")
     private DisputeReason reason;
 
+    @Size(max = 1024, message = "field 'description' must not exceed 1024 characters")
     private String description;
 }

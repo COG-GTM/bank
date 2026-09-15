@@ -25,7 +25,9 @@ This service is built with **Java 21**, **Spring Boot 3.3.4**, **MySQL**, **Spri
 
 Errors are returned as `ExceptionResponse` `{ code, message, description, validationErrors }`:
 - `400` - bean-validation failures or an invalid resolution (dispute already closed, or status set back to `OPEN`).
-- `404` - unknown dispute id, or unknown account when opening a dispute.
+- `404` - unknown dispute id, or unknown account (account-service answered 404) when opening a dispute.
+- `409` - concurrent modification of the same dispute (optimistic locking); retry the request.
+- `502` - account-service unreachable or returned an error other than 404.
 
 ## Enums
 - `DisputeReason`: `UNAUTHORIZED_TRANSACTION`, `DUPLICATE_CHARGE`, `SERVICE_NOT_RECEIVED`, `OTHER`

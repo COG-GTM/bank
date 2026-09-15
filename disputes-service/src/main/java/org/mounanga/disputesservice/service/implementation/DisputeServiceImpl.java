@@ -1,5 +1,6 @@
 package org.mounanga.disputesservice.service.implementation;
 
+import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -11,6 +12,7 @@ import org.mounanga.disputesservice.dto.DisputeResponseDTO;
 import org.mounanga.disputesservice.entity.Dispute;
 import org.mounanga.disputesservice.enums.DisputeStatus;
 import org.mounanga.disputesservice.exception.AccountNotFoundException;
+import org.mounanga.disputesservice.exception.AccountServiceUnavailableException;
 import org.mounanga.disputesservice.exception.DisputeNotFoundException;
 import org.mounanga.disputesservice.exception.FieldValidationException;
 import org.mounanga.disputesservice.repository.DisputeRepository;
@@ -89,9 +91,12 @@ public class DisputeServiceImpl implements DisputeService {
     private AccountResponseDTO findAccountById(String accountId) {
         try {
             return accountRestClient.getAccountById(accountId);
-        } catch (Exception e) {
-            log.warn("Account lookup for id '{}' failed: {}", accountId, e.getMessage());
+        } catch (FeignException.NotFound e) {
+            log.warn("Account with id '{}' not found", accountId);
             return null;
+        } catch (Exception e) {
+            log.error("Account lookup for id '{}' failed: {}", accountId, e.getMessage());
+            throw new AccountServiceUnavailableException("Account service is unavailable, please retry later", e);
         }
     }
 

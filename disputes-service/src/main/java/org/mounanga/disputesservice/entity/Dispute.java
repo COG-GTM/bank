@@ -53,6 +53,9 @@ public class Dispute {
     @Column(length = 1024)
     private String resolutionNote;
 
+    @Version
+    private Long version;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdDate;
