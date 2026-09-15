@@ -22,6 +22,7 @@
         <module>authentication-service</module>
         <module>customer-service</module>
         <module>account-service</module>
+        <module>disputes-service</module>
     </modules>
 
     <build>
