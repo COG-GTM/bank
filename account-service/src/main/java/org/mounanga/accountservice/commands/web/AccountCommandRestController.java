@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.mounanga.accountservice.commands.command.*;
 import org.mounanga.accountservice.commands.dto.*;
+import feign.FeignException;
 import org.mounanga.accountservice.commands.exception.CustomerNotFoundException;
 import org.mounanga.accountservice.commands.util.factory.CommandFactory;
 import org.mounanga.accountservice.commands.util.generator.IdGenerator;
@@ -91,7 +92,7 @@ public class AccountCommandRestController {
     private CustomerExistResponseDTO checkCustomerExist(String customerId) {
         try{
             return customerRestClient.checkCustomerExist(customerId);
-        }catch(Exception e) {
+        }catch(FeignException.NotFound e) {
             return null;
         }
     }

@@ -2,6 +2,8 @@ package org.mounanga.accountservice.commands.web;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import feign.FeignException;
+import feign.Request;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.Test;
 import org.mounanga.accountservice.commands.dto.CustomerExistResponseDTO;
@@ -19,15 +21,20 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -66,6 +73,23 @@ class AccountCommandRestControllerTest {
         mockMvc.perform(asyncDispatch(started))
                 .andExpect(status().isOk())
                 .andExpect(content().string("000000042"));
+    }
+
+    @Test
+    void createAccountRejectsUnknownCustomerWithNotFound() throws Exception {
+        Request request = Request.create(Request.HttpMethod.GET, "http://CUSTOMER-SERVICE/bank/intern/verify/missing",
+                Map.of(), null, StandardCharsets.UTF_8, null);
+        when(customerRestClient.checkCustomerExist("missing"))
+                .thenThrow(new FeignException.NotFound("Not Found", request, null, null));
+
+        mockMvc.perform(post("/accounts/commands/create")
+                        .header("Authorization", "Bearer " + token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customerId\":\"missing\",\"currency\":\"EUR\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Customer with id missing not found"));
+
+        verify(commandGateway, never()).send(any());
     }
 
     private String token() {
