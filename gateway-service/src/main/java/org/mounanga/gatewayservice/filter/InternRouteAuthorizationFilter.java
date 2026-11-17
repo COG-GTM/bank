@@ -23,7 +23,7 @@ public class InternRouteAuthorizationFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        String path = exchange.getRequest().getURI().getRawPath();
+        String path = exchange.getRequest().getURI().getPath();
         if (INTERN_SEGMENT.matcher(path).find() && !hasBearerToken(exchange)) {
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
