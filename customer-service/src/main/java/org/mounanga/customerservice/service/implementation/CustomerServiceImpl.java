@@ -3,6 +3,7 @@ package org.mounanga.customerservice.service.implementation;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 
+import org.mounanga.customerservice.dto.CustomerExistResponseDTO;
 import org.mounanga.customerservice.dto.CustomerPageResponseDTO;
 import org.mounanga.customerservice.dto.CustomerRequestDTO;
 import org.mounanga.customerservice.dto.CustomerResponseDTO;
@@ -97,6 +98,13 @@ public class CustomerServiceImpl implements CustomerService {
         log.info("In deleteCustomerById()");
         customerRepository.deleteById(id);
         log.info("Customer with id '{}' deleted",id);
+    }
+
+    @Override
+    public CustomerExistResponseDTO verifyCustomerExist(String id) {
+        log.info("In verifyCustomerExist()");
+        Customer customer = findCustomerById(id);
+        return new CustomerExistResponseDTO(customer.getId(), customer.getEmail());
     }
 
     private Customer findCustomerById(String id) {

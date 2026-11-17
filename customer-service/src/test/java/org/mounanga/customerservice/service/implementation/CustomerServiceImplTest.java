@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mounanga.customerservice.dto.CustomerExistResponseDTO;
 import org.mounanga.customerservice.dto.CustomerPageResponseDTO;
 import org.mounanga.customerservice.dto.CustomerRequestDTO;
 import org.mounanga.customerservice.dto.CustomerResponseDTO;
@@ -306,6 +307,29 @@ class CustomerServiceImplTest {
         verify(customerRepository, times(1)).findById(customerId);
         verify(customerRepository, times(1)).existsByCin(dto.getCin());
         verify(customerRepository, times(1)).existsByEmail(dto.getEmail());
+    }
+
+    @Test
+    void testVerifyCustomerExist() {
+        String customerId = "123";
+        Customer customer = new Customer();
+        customer.setId(customerId);
+        customer.setEmail("alice@example.com");
+
+        when(customerRepository.findById(customerId)).thenReturn(Optional.of(customer));
+
+        CustomerExistResponseDTO result = customerService.verifyCustomerExist(customerId);
+
+        assertEquals(new CustomerExistResponseDTO(customerId, "alice@example.com"), result);
+        verify(customerRepository, times(1)).findById(customerId);
+    }
+
+    @Test
+    void testVerifyCustomerExistNotFound() {
+        String customerId = "missing";
+        when(customerRepository.findById(customerId)).thenReturn(Optional.empty());
+
+        assertThrows(CustomerNotFoundException.class, () -> customerService.verifyCustomerExist(customerId));
     }
 
     private Customer fromCustomerRequestDTO(String customerId, CustomerRequestDTO dto){
