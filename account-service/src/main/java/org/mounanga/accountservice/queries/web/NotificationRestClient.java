@@ -1,12 +1,13 @@
 package org.mounanga.accountservice.queries.web;
 
 import jakarta.validation.Valid;
+import org.mounanga.accountservice.common.feign.NotificationFeignConfiguration;
 import org.mounanga.accountservice.queries.dto.NotificationRequestDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient("NOTIFICATION-SERVICE")
+@FeignClient(name = "NOTIFICATION-SERVICE", configuration = NotificationFeignConfiguration.class)
 public interface NotificationRestClient {
 
     @PostMapping("/bank/notifications/send")
