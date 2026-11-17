@@ -34,6 +34,11 @@ class NotificationRouteAuthorizationFilterTest {
     }
 
     @Test
+    void rejectsServiceIdWithPathParameterWithoutToken() {
+        assertRejected(MockServerHttpRequest.post("/NOTIFICATION-SERVICE;x=1/bank/notifications/send").build());
+    }
+
+    @Test
     void rejectsLowercaseServiceIdWithoutToken() {
         assertRejected(MockServerHttpRequest.post("/notification-service/bank/notifications/send").build());
     }

@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 public class NotificationRouteAuthorizationFilter implements GlobalFilter, Ordered {
 
     private static final Pattern NOTIFICATION_SERVICE_ROUTE =
-            Pattern.compile("^/notification-service(/|$)", Pattern.CASE_INSENSITIVE);
+            Pattern.compile("^/notification-service(/|;|$)", Pattern.CASE_INSENSITIVE);
     private static final String BEARER = "Bearer ";
 
     @Override
