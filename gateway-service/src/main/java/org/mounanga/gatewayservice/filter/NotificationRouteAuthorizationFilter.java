@@ -14,14 +14,14 @@ import java.util.regex.Pattern;
 @Component
 public class NotificationRouteAuthorizationFilter implements GlobalFilter, Ordered {
 
-    private static final Pattern NOTIFICATIONS_SEGMENT =
-            Pattern.compile("(^|/)notifications(/|$)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern NOTIFICATION_SERVICE_ROUTE =
+            Pattern.compile("^/notification-service(/|$)", Pattern.CASE_INSENSITIVE);
     private static final String BEARER = "Bearer ";
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
-        if (NOTIFICATIONS_SEGMENT.matcher(path).find() && !hasBearerToken(exchange)) {
+        if (NOTIFICATION_SERVICE_ROUTE.matcher(path).find() && !hasBearerToken(exchange)) {
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }

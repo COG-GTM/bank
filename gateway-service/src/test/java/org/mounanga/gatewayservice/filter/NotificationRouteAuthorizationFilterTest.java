@@ -30,7 +30,12 @@ class NotificationRouteAuthorizationFilterTest {
     @Test
     void rejectsPercentEncodedNotificationCallWithoutToken() {
         assertRejected(MockServerHttpRequest.method(HttpMethod.POST,
-                URI.create("/NOTIFICATION-SERVICE/bank/%6Eotifications/send")).build());
+                URI.create("/%4EOTIFICATION-SERVICE/bank/notifications/send")).build());
+    }
+
+    @Test
+    void rejectsLowercaseServiceIdWithoutToken() {
+        assertRejected(MockServerHttpRequest.post("/notification-service/bank/notifications/send").build());
     }
 
     @Test
@@ -45,9 +50,9 @@ class NotificationRouteAuthorizationFilterTest {
     }
 
     @Test
-    void forwardsOtherRoutesWithoutToken() {
+    void forwardsOtherServicesNotificationsPathsWithoutToken() {
         MockServerWebExchange exchange = MockServerWebExchange.from(
-                MockServerHttpRequest.get("/AUTHENTICATION-SERVICE/bank/auth/login").build());
+                MockServerHttpRequest.get("/ACCOUNT-SERVICE/bank/notifications").build());
         AtomicBoolean forwarded = new AtomicBoolean();
 
         filter.filter(exchange, chain(forwarded)).block();
