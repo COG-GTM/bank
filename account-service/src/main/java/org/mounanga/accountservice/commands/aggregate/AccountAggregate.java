@@ -21,7 +21,7 @@ import org.mounanga.accountservice.common.event.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Aggregate
+@Aggregate(cache = "accountAggregateCache")
 @Getter
 @Slf4j
 public class AccountAggregate {
