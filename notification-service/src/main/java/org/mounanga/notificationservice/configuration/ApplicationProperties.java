@@ -10,4 +10,7 @@ public class ApplicationProperties {
 
     @Value("${application.mail.email-system}")
     private String systemEmail;
+
+    @Value("${application.security.jwt.secret}")
+    private String jwtSecret;
 }
