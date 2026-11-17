@@ -40,6 +40,7 @@ services:
       - MAIL_USERNAME=brody
       - MAIL_PASSWORD=brody
       - EMAIL_SYSTEM=notification@bank.com
+      - JWT_SECRET=AaZzBbCcYyDdXxEeWwFf
     depends_on:
       - discovery-service
       - gateway-service
