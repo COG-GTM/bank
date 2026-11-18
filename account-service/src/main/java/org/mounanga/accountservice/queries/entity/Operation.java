@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @Setter
 @Builder
 @ToString
+@Table(indexes = @Index(name = "idx_operation_account_id_date_time", columnList = "account_id, date_time"))
 public class Operation {
 
     @Id
