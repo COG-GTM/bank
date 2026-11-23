@@ -24,8 +24,33 @@
         <module>account-service</module>
     </modules>
 
+    <properties>
+        <!-- Java4Shell (CVE-2026-114938): fixed builds are 21.0.13.1+, 25.0.5.1+, 27.0.1.1+ (enforcer normalizes x.y.z.w to x.y.z-w) -->
+        <jdk.fixed.versions>[21.0.13-1,22),[25.0.5-1,26),[27.0.1-1,)</jdk.fixed.versions>
+    </properties>
+
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce-fixed-jdk</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>${jdk.fixed.versions}</version>
+                                    <message>This JDK is affected by Java4Shell (CVE-2026-114938). Use a fixed build in ${jdk.fixed.versions}, e.g. Temurin 21.0.13.1+2.</message>
+                                </requireJavaVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

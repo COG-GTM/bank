@@ -1,0 +1,32 @@
+name: JDK security (Java4Shell CVE-2026-114938)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Fixed JDK build; the maven-enforcer rule in pom.xml fails on any affected JDK.
+    container: eclipse-temurin:21.0.13.1_2-jdk-jammy@sha256:4b3d0998ee65462bd86ff060c87119b3575294cb3d0927372afa6f3708b0c8db
+    env:
+      MAVEN_VERSION: 3.9.9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Maven
+        run: |
+          curl -fsSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" | tar -xz -C /opt
+          echo "/opt/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
+      - name: Show JDK
+        run: java -version
+      # Tests are skipped: the Spring context tests need Eureka (localhost:8761) and MySQL.
+      - name: Build
+        run: mvn -B package -DskipTests
+
+  runtime-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Dockerfile base images run a fixed JDK
+        run: ./scripts/check-jdk-images.sh
