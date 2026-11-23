@@ -1,4 +1,4 @@
-FROM openjdk:21-oracle
+FROM eclipse-temurin:21.0.13.1_2-jre-jammy@sha256:cdbc48132dd37b9e65cfccf2417c5668ac75046c4168af5486526eb9788f0e8f
 
 # Definition of the maintainer and author of the image
 LABEL authors="Brody Gaudel MOUNANGA BOUKA"
